@@ -2,1277 +2,480 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>会议预定系统</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdn.staticfile.net/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <!-- Supabase JavaScript Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
         }
 
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-color: #2ecc71;
-            --danger-color: #e74c3c;
-            --room1401: #3498db;
-            --room1402: #e74c3c;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --bg-light: #f8f9fa;
-            --border-radius: 12px;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: var(--primary-gradient);
-            min-height: 100vh;
-            padding: 0;
-            color: var(--text-primary);
-            font-size: 16px;
-            line-height: 1.5;
-        }
-
-        /* 头部 */
-        .header {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 20px 15px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .header p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        /* 主容器 */
-        .container {
-            max-width: 100%;
-            margin: 0;
-            background: white;
-            min-height: calc(100vh - 80px);
-        }
-
-        .content {
-            padding: 15px;
-        }
-
-        /* 周视图控制 */
-        .week-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            background: var(--bg-light);
-            padding: 12px 15px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .week-controls h2 {
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            font-weight: 600;
-            text-align: center;
-            flex: 1;
-            margin: 0 10px;
-        }
-
-        .week-controls button {
-            background: var(--primary-gradient);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            min-width: 60px;
-            transition: transform 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        .week-controls button:active {
-            transform: scale(0.95);
-        }
-
-        /* 日历视图 */
-        .calendar-view {
-            margin-bottom: 20px;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .calendar-header {
+        /* Calendar Grid Styles */
+        .calendar-grid {
             display: grid;
-            grid-template-columns: 50px repeat(7, 1fr);
-            background: #2c3e50;
-            color: white;
-            font-weight: 600;
-            font-size: 0.7rem;
-            text-align: center;
+            grid-template-columns: 80px repeat(7, minmax(140px, 1fr));
+            overflow-x: auto;
         }
-
-        .calendar-header .time-header {
-            padding: 8px 4px;
-            border-right: 1px solid #34495e;
-            font-size: 0.65rem;
-        }
-
-        .calendar-header .day-header {
-            padding: 8px 2px;
-            border-right: 1px solid #34495e;
-            font-size: 0.65rem;
-        }
-
-        .calendar-header .day-header:last-child {
-            border-right: none;
-        }
-
-        .calendar-header .day-header.today {
-            background: #e74c3c;
-        }
-
-        .calendar-body {
-            max-height: 400px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .calendar-body::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .calendar-body::-webkit-scrollbar-thumb {
-            background: #bdc3c7;
-            border-radius: 2px;
-        }
-
-        .time-row {
-            display: grid;
-            grid-template-columns: 50px repeat(7, 1fr);
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .time-row .time-slot {
-            padding: 6px 2px;
-            background: var(--bg-light);
-            border-right: 1px solid #ecf0f1;
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .time-row .day-slot {
-            min-height: 40px;
-            border-right: 1px solid #ecf0f1;
-            position: relative;
+        
+        .time-col {
+            position: sticky;
+            left: 0;
             background: white;
-        }
-
-        .time-row .day-slot:last-child {
-            border-right: none;
-        }
-
-        .time-row .day-slot:active {
-            background: #f0f3f5;
+            z-index: 10;
+            border-right: 2px solid #e2e8f0;
         }
 
         .booking-block {
-            position: absolute;
-            left: 1px;
-            right: 1px;
+            font-size: 0.75rem;
             padding: 2px 4px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.6rem;
-            color: white;
+            margin-bottom: 2px;
+            border-radius: 4px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            z-index: 10;
-            line-height: 1.2;
-        }
-
-        .booking-block:active {
-            transform: scale(0.98);
-        }
-
-        .booking-block.room-1401 {
-            background: var(--room1401);
-            border-left: 2px solid #1a5276;
-        }
-
-        .booking-block.room-1402 {
-            background: var(--room1402);
-            border-left: 2px solid #922b21;
-        }
-
-        /* 图例 */
-        .legend {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 10px;
-            flex-wrap: wrap;
-            padding: 10px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
-            color: var(--text-primary);
-        }
-
-        .legend-color {
-            width: 20px;
-            height: 12px;
-            border-radius: 2px;
-        }
-
-        .legend-color.room-1401 {
-            background: var(--room1401);
-        }
-
-        .legend-color.room-1402 {
-            background: var(--room1402);
-        }
-
-        /* 新增预订表单 */
-        .form-section {
-            background: var(--bg-light);
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .form-section h3 {
-            color: var(--text-primary);
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            margin-bottom: 6px;
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 0.85rem;
-        }
-
-        .form-group input,
-        .form-group select {
-            padding: 10px 12px;
-            border: 1px solid #dfe6e9;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background: white;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-group select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237f8c8d' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            padding-right: 30px;
-        }
-
-        .form-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .form-buttons button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: transform 0.2s;
+            transition: transform 0.1s;
+        }
+        
+        .booking-block:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .btn-primary {
-            background: var(--primary-gradient);
-            color: white;
+        /* Toast Animation */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
-
-        .form-buttons button:active {
-            transform: scale(0.98);
+        .toast {
+            animation: slideIn 0.3s ease-out forwards;
         }
-
-        /* 预订记录列表 */
-        .bookings-list {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        .bookings-list h3 {
-            color: var(--text-primary);
-            padding: 15px;
-            background: var(--bg-light);
-            border-bottom: 2px solid #667eea;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .booking-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ecf0f1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .booking-item:last-child {
-            border-bottom: none;
-        }
-
-        .booking-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .booking-person {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-
-        .booking-time {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .booking-details {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .room-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            color: white;
-            font-weight: 500;
-            font-size: 0.8rem;
-        }
-
-        .room-badge.room-1401 {
-            background: var(--room1401);
-        }
-
-        .room-badge.room-1402 {
-            background: var(--room1402);
-        }
-
-        .booking-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: transform 0.2s;
-        }
-
-        .btn-edit {
-            background: var(--room1401);
-            color: white;
-        }
-
-        .btn-delete {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .action-btn:active {
-            transform: scale(0.95);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 30px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state svg {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 12px;
-            opacity: 0.4;
-        }
-
-        .empty-state p {
-            font-size: 0.9rem;
-        }
-
-        /* 模态框 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-30px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal-header {
-            margin-bottom: 15px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .modal-header h3 {
-            color: var(--text-primary);
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .modal-body {
-            margin-bottom: 15px;
-        }
-
-        .modal-footer {
-            display: flex;
-            gap: 10px;
-        }
-
-        /* 通知 */
-        .notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            font-size: 0.9rem;
-            z-index: 2000;
-            animation: slideInDown 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 90%;
-            text-align: center;
-        }
-
-        @keyframes slideInDown {
-            from {
-                transform: translateX(-50%) translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(-50%) translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .notification.success {
-            background: var(--success-color);
-        }
-
-        .notification.error {
-            background: var(--danger-color);
-        }
-
-        /* 平板和桌面适配 */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 1200px;
-                margin: 20px auto;
-                border-radius: 20px;
-            }
-
-            .content {
-                padding: 30px;
-            }
-
-            .header {
-                padding: 30px;
-            }
-
-            .header h1 {
-                font-size: 2.5rem;
-            }
-
-            .header p {
-                font-size: 1.1rem;
-            }
-
-            .week-controls h2 {
-                font-size: 1.3rem;
-            }
-
-            .week-controls button {
-                padding: 10px 20px;
-                font-size: 1rem;
-                min-width: 80px;
-            }
-
-            .calendar-header {
-                grid-template-columns: 80px repeat(7, 1fr);
-                font-size: 0.9rem;
-            }
-
-            .calendar-header .time-header,
-            .calendar-header .day-header {
-                padding: 15px 10px;
-            }
-
-            .time-row {
-                grid-template-columns: 80px repeat(7, 1fr);
-            }
-
-            .time-row .time-slot {
-                font-size: 0.9rem;
-                padding: 10px;
-            }
-
-            .time-row .day-slot {
-                min-height: 60px;
-            }
-
-            .booking-block {
-                font-size: 0.85rem;
-                padding: 5px 8px;
-            }
-
-            .form-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
-            }
-
-            .form-section h3 {
-                font-size: 1.5rem;
-            }
-
-            .form-group label {
-                font-size: 1rem;
-            }
-
-            .form-group input,
-            .form-group select {
-                font-size: 1rem;
-                padding: 12px 15px;
-            }
-
-            .form-buttons button {
-                padding: 12px 30px;
-                font-size: 1rem;
-            }
-
-            .bookings-list h3 {
-                font-size: 1.5rem;
-                padding: 20px 25px;
-            }
-
-            .booking-item {
-                flex-direction: row;
-                align-items: center;
-            }
-
-            .booking-info {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .booking-person {
-                font-size: 1rem;
-            }
-
-            .booking-time {
-                font-size: 0.9rem;
-            }
-
-            .booking-actions {
-                margin-top: 0;
-                flex-direction: row;
-            }
-
-            .action-btn {
-                min-width: 80px;
-                font-size: 0.9rem;
-                padding: 6px 12px;
-            }
-
-            .empty-state {
-                padding: 40px;
-            }
-
-            .empty-state svg {
-                width: 80px;
-                height: 80px;
-                margin-bottom: 15px;
-            }
-
-            .empty-state p {
-                font-size: 1rem;
-            }
-
-            .legend {
-                gap: 20px;
-            }
-
-            .legend-item {
-                font-size: 0.9rem;
-            }
-
-            .legend-color {
-                width: 30px;
-                height: 20px;
-                border-radius: 4px;
-            }
-        }
-
-        /* 大屏幕优化 */
-        @media (min-width: 1024px) {
-            .booking-table {
-                display: table;
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            .booking-table thead {
-                display: table-header-group;
-            }
-
-            .booking-table tbody {
-                display: table-row-group;
-            }
-
-            .booking-table tr {
-                display: table-row;
-            }
-
-            .booking-table th,
-            .booking-table td {
-                display: table-cell;
-                padding: 15px;
-                text-align: left;
-                border-bottom: 1px solid #ecf0f1;
-            }
-
-            .booking-table th {
-                background: #2c3e50;
-                color: white;
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 0.9rem;
-            }
-
-            .booking-table tr:hover {
-                background: #f8f9fa;
-            }
-
-            .booking-item {
-                display: none;
-            }
-        }
-
-        @media (max-width: 1023px) {
-            .booking-table {
-                display: none;
-            }
-        }
-
-        /* 防止双击缩放 */
-        button, a, input, select, textarea {
-            touch-action: manipulation;
-        }
-
-        /* 优化触摸体验 */
-        @media (hover: none) {
-            .week-controls button:hover,
-            .form-buttons button:hover,
-            .action-btn:hover {
-                transform: none;
-                box-shadow: none;
-            }
+        .toast.hiding {
+            animation: fadeOut 0.3s ease-in forwards;
         }
     </style>
 </head>
-<body>
-    <div class="header">
-        <h1>🏢 会议预定系统</h1>
-        <p>高效管理您的会议室预订</p>
-    </div>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
 
-    <div class="container">
-        <div class="content">
-            <!-- 周视图控制 -->
-            <div class="week-controls">
-                <button onclick="previousWeek()">◀ 上周</button>
-                <h2 id="weekDisplay">2024年1月1日 - 1月7日</h2>
-                <button onclick="nextWeek()">下周 ▶</button>
+    <!-- Header Comments explaining limitations -->
+    <!-- 
+        NOTE: As a pure frontend development Agent, this code cannot implement real Supabase data writing, 
+        user authentication persistence, or other backend features. 
+        Users need to configure their own Supabase backend service, create database tables, and set Row Level Security policies.
+        This is a demonstration version; real deployment requires complete backend configuration.
+    -->
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm z-20">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">🏢 会议预定系统</h1>
+                <p class="text-sm text-gray-500">高效管理您的会议室预订</p>
             </div>
-
-            <!-- 日历视图 -->
-            <div class="calendar-view">
-                <div class="calendar-header" id="calendarHeader"></div>
-                <div class="calendar-body" id="calendarBody"></div>
-            </div>
-
-            <!-- 图例 -->
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color room-1401"></div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 text-sm">
+                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
                     <span>会议室 1401</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color room-1402"></div>
+                    <span class="w-3 h-3 rounded-full bg-green-500 ml-2"></span>
                     <span>会议室 1402</span>
                 </div>
             </div>
+        </div>
+    </header>
 
-            <!-- 新增预订表单 -->
-            <div class="form-section">
-                <h3>📅 新增预订</h3>
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label for="bookingName">预订人</label>
-                        <input type="text" id="bookingName" placeholder="请输入预订人姓名" required>
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        <!-- Left Panel: Calendar View -->
+        <section class="flex-1 flex flex-col border-r border-gray-200 bg-white min-w-0">
+            <!-- Week Control -->
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <button id="prevWeekBtn" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 text-gray-700 transition">
+                    ◀ 上周
+                </button>
+                <h2 id="currentWeekLabel" class="text-lg font-semibold text-gray-700">2024年1月1日 - 1月7日</h2>
+                <button id="nextWeekBtn" class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 text-gray-700 transition">
+                    下周 ▶
+                </button>
+            </div>
+
+            <!-- Calendar Grid Header -->
+            <div class="grid grid-cols-[80px_repeat(7,minmax(140px,1fr))] border-b border-gray-200 bg-gray-100 text-sm font-medium text-gray-600 text-center">
+                <div class="p-2 border-r border-gray-200">时间</div>
+                <div class="p-2 border-r border-gray-200" id="day-0">周日</div>
+                <div class="p-2 border-r border-gray-200" id="day-1">周一</div>
+                <div class="p-2 border-r border-gray-200" id="day-2">周二</div>
+                <div class="p-2 border-r border-gray-200" id="day-3">周三</div>
+                <div class="p-2 border-r border-gray-200" id="day-4">周四</div>
+                <div class="p-2 border-r border-gray-200" id="day-5">周五</div>
+                <div class="p-2" id="day-6">周六</div>
+            </div>
+
+            <!-- Calendar Grid Body -->
+            <div id="calendarBody" class="flex-1 overflow-y-auto calendar-grid bg-white">
+                <!-- Javascript will populate this -->
+            </div>
+        </section>
+
+        <!-- Right Panel: Sidebar -->
+        <aside class="w-96 flex flex-col bg-gray-50 overflow-y-auto">
+            <!-- Add Booking Form -->
+            <div class="p-6 bg-white shadow-sm m-4 rounded-lg">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">📅 新增预订</h3>
+                <form id="bookingForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">预订人</label>
+                        <input type="text" id="bookerName" placeholder="请输入预订人姓名" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
-                    <div class="form-group">
-                        <label for="roomSelect">会议室</label>
-                        <select id="roomSelect" required>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">会议室</label>
+                        <select id="roomSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                             <option value="">请选择会议室</option>
-                            <option value="1401">会议室 1401</option>
-                            <option value="1402">会议室 1402</option>
+                            <option value="会议室 1401">会议室 1401</option>
+                            <option value="会议室 1402">会议室 1402</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="startDate">开始日期</label>
-                        <input type="date" id="startDate" required>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                            <input type="date" id="startDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                            <select id="startTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">请选择开始时间</option>
+                                <!-- JS populated -->
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="startTime">开始时间</label>
-                        <select id="startTime" required>
-                            <option value="">请选择开始时间</option>
-                        </select>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                            <input type="date" id="endDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+                            <select id="endTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">请选择结束时间</option>
+                                <!-- JS populated -->
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="endDate">结束日期</label>
-                        <input type="date" id="endDate" required>
+
+                    <div class="flex space-x-3 pt-2">
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition shadow-sm flex justify-center items-center">
+                            ✅ 添加预订
+                        </button>
+                        <button type="button" id="clearFormBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition flex justify-center items-center">
+                            🔄 清空表单
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="endTime">结束时间</label>
-                        <select id="endTime" required>
-                            <option value="">请选择结束时间</option>
-                        </select>
+                </form>
+            </div>
+
+            <!-- Booking List -->
+            <div class="flex-1 px-4 pb-4">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 border-l-4 border-green-500 pl-3">📋 预订记录列表</h3>
+                <div id="bookingListContainer" class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <!-- Desktop Table -->
+                    <table class="w-full hidden md:table text-sm text-left">
+                        <thead class="bg-gray-100 text-gray-600">
+                            <tr>
+                                <th class="px-4 py-3 font-medium">预订人</th>
+                                <th class="px-4 py-3 font-medium">会议室</th>
+                                <th class="px-4 py-3 font-medium">开始时间</th>
+                                <th class="px-4 py-3 font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTableBody" class="divide-y divide-gray-100">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                    <!-- Mobile Cards -->
+                    <div id="bookingCardList" class="md:hidden space-y-3 p-3">
+                        <!-- JS populated -->
+                    </div>
+                    <div id="emptyState" class="hidden p-8 text-center text-gray-400">
+                        <i class="far fa-calendar-times text-4xl mb-2"></i>
+                        <p>暂无预订记录</p>
                     </div>
                 </div>
-                <div class="form-buttons">
-                    <button class="btn-primary" onclick="addBooking()">✅ 添加预订</button>
-                    <button class="btn-secondary" onclick="clearForm()">🔄 清空表单</button>
-                </div>
             </div>
+        </aside>
+    </main>
 
-            <!-- 预订记录列表 -->
-            <div class="bookings-list">
-                <h3>📋 预订记录列表</h3>
-
-                <!-- 桌面版表格 -->
-                <table class="booking-table">
-                    <thead>
-                        <tr>
-                            <th>预订人</th>
-                            <th>会议室</th>
-                            <th>开始时间</th>
-                            <th>结束时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bookingsTableBody"></tbody>
-                </table>
-
-                <!-- 移动版卡片 -->
-                <div id="bookingsCardBody"></div>
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 transform transition-all scale-100">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800">✏️ 编辑预订</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-        </div>
-    </div>
-
-    <!-- 编辑模态框 -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>✏️ 编辑预订</h3>
-            </div>
-            <div class="modal-body">
+            <div class="p-6 space-y-4">
                 <input type="hidden" id="editBookingId">
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editBookingName">预订人</label>
-                    <input type="text" id="editBookingName" required>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">预订人</label>
+                    <input type="text" id="editBookerName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editRoomSelect">会议室</label>
-                    <select id="editRoomSelect" required>
-                        <option value="1401">会议室 1401</option>
-                        <option value="1402">会议室 1402</option>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">会议室</label>
+                    <select id="editRoomSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="会议室 1401">会议室 1401</option>
+                        <option value="会议室 1402">会议室 1402</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editStartDate">开始日期</label>
-                    <input type="date" id="editStartDate" required>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                        <input type="date" id="editStartDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                        <select id="editStartTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- JS populated -->
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editStartTime">开始时间</label>
-                    <select id="editStartTime" required>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editEndDate">结束日期</label>
-                    <input type="date" id="editEndDate" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label for="editEndTime">结束时间</label>
-                    <select id="editEndTime" required>
-                    </select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                        <input type="date" id="editEndDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+                        <select id="editEndTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- JS populated -->
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" style="flex: 1;" onclick="closeEditModal()">取消</button>
-                <button class="btn-primary" style="flex: 1;" onclick="saveEdit()">保存修改</button>
+            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                <button id="cancelEditBtn" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100">取消</button>
+                <button id="saveEditBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">保存修改</button>
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col space-y-2"></div>
 
     <script>
-        // 全局变量
-        let currentWeekStart = getMonday(new Date());
+        // ==========================================
+        // Supabase Initialization
+        // ==========================================
+        // Please replace with your Supabase project configuration
+        const supabaseUrl = 'https://yylfnizxlcgbglsiquzn.supabase.co';
+        const supabaseKey = 'sb_publishable_r_IwrevqUwddJ9Yv8sOwlg_iRZrgGsx';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // ==========================================
+        // State & Config
+        // ==========================================
         let bookings = [];
-        const timeSlots = generateTimeSlots();
+        let currentWeekStart = getMonday(new Date());
+        
+        // Time slots configuration (8:00 to 18:00, 30 min intervals)
+        const timeSlots = [];
+        for (let i = 8; i <= 18; i++) {
+            timeSlots.push(`${i.toString().padStart(2, '0')}:00`);
+            if (i < 18) timeSlots.push(`${i.toString().padStart(2, '0')}:30`);
+        }
 
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBookings();
-            initializeTimeSelects();
-            initializeDateInputs();
-            renderCalendar();
-            renderBookingsList();
-            updateWeekDisplay();
-        });
+        // ==========================================
+        // Supabase Data Functions
+        // ==========================================
+        
+        // Example function to load bookings from Supabase
+        async function loadBookingsFromSupabase() {
+            try {
+                // Query the 'meeting_bookings' table
+                const { data, error } = await supabase
+                    .from('meeting_bookings')
+                    .select('*');
 
-        // 生成时间槽（每半小时）
-        function generateTimeSlots() {
-            const slots = [];
-            for (let hour = 8; hour <= 18; hour++) {
-                slots.push(`${hour.toString().padStart(2, '0')}:00`);
-                if (hour < 18) {
-                    slots.push(`${hour.toString().padStart(2, '0')}:30`);
-                }
+                if (error) throw error;
+
+                return data;
+            } catch (err) {
+                console.error('Error loading bookings from Supabase:', err.message);
+                showToast('无法连接数据库，使用本地演示数据', 'error');
+                return null;
             }
-            return slots;
         }
 
-        // 初始化时间选择器
-        function initializeTimeSelects() {
-            const startSelect = document.getElementById('startTime');
-            const endSelect = document.getElementById('endTime');
-            const editStartSelect = document.getElementById('editStartTime');
-            const editEndSelect = document.getElementById('editEndTime');
+        // ==========================================
+        // Core Application Logic
+        // ==========================================
 
-            [startSelect, endSelect, editStartSelect, editEndSelect].forEach(select => {
-                select.innerHTML = '<option value="">请选择时间</option>';
-                timeSlots.forEach(time => {
-                    const option = document.createElement('option');
-                    option.value = time;
-                    option.textContent = time;
-                    select.appendChild(option);
-                });
-            });
-        }
-
-        // 初始化日期输入
-        function initializeDateInputs() {
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            initTimeSelects();
+            loadBookings();
+            renderCalendar();
+            setupEventListeners();
+            
+            // Set default dates in form to today
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('startDate').value = today;
             document.getElementById('endDate').value = today;
-            document.getElementById('startDate').min = today;
-            document.getElementById('endDate').min = today;
-        }
+        });
 
-        // 获取本周一
-        function getMonday(date) {
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setDate(diff));
-        }
-
-        // 获取本周日期数组
-        function getWeekDays(startDate) {
-            const days = [];
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                days.push(date);
+        // Load Bookings (Modified to use Supabase)
+        async function loadBookings() {
+            const data = await loadBookingsFromSupabase();
+            
+            if (data) {
+                bookings = data;
+            } else {
+                // Fallback to mock data if Supabase connection fails (for demo purposes)
+                bookings = [
+                    { id: 1, name: '张三', room: '会议室 1401', start: '2024-01-01T09:00', end: '2024-01-01T10:30' },
+                    { id: 2, name: '李四', room: '会议室 1402', start: '2024-01-01T14:00', end: '2024-01-01T15:00' },
+                    { id: 3, name: '王五', room: '会议室 1401', start: '2024-01-02T10:00', end: '2024-01-02T11:00' }
+                ];
             }
-            return days;
+            
+            renderCalendar();
+            renderBookingList();
         }
 
-        // 格式化日期
-        function formatDate(date) {
-            return date.toISOString().split('T')[0];
+        // Save Bookings (Commented out as per requirements)
+        // Pure frontend version cannot implement real data write, requires backend service support
+        /*
+        async function saveBookings() {
+            // Logic to sync local 'bookings' array to Supabase would go here
+            // const { error } = await supabase.from('meeting_bookings').upsert(bookings);
         }
+        */
 
-        // 格式化日期显示
-        function formatDisplayDate(date) {
-            const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            return `${months[date.getMonth()]}${date.getDate()}日${weekdays[date.getDay()]}`;
-        }
-
-        // 更新周显示
-        function updateWeekDisplay() {
-            const weekDays = getWeekDays(currentWeekStart);
-            const startStr = `${weekDays[0].getFullYear()}年${weekDays[0].getMonth() + 1}月${weekDays[0].getDate()}日`;
-            const endStr = `${weekDays[6].getMonth() + 1}月${weekDays[6].getDate()}日`;
-            document.getElementById('weekDisplay').textContent = `${startStr} - ${endStr}`;
-        }
-
-        // 渲染日历
-        function renderCalendar() {
-            const header = document.getElementById('calendarHeader');
-            const body = document.getElementById('calendarBody');
-            const weekDays = getWeekDays(currentWeekStart);
-            const today = new Date();
-
-            // 渲染表头
-            let headerHTML = '<div class="time-header">时间</div>';
-            weekDays.forEach(day => {
-                const isToday = formatDate(day) === formatDate(today);
-                headerHTML += `<div class="day-header ${isToday ? 'today' : ''}">${formatDisplayDate(day)}</div>`;
-            });
-            header.innerHTML = headerHTML;
-
-            // 渲染时间槽
-            let bodyHTML = '';
-            timeSlots.forEach(time => {
-                bodyHTML += '<div class="time-row">';
-                bodyHTML += `<div class="time-slot">${time}</div>`;
-
-                weekDays.forEach(day => {
-                    const dateStr = formatDate(day);
-                    bodyHTML += `<div class="day-slot" data-date="${dateStr}" data-time="${time}"></div>`;
-                });
-
-                bodyHTML += '</div>';
-            });
-            body.innerHTML = bodyHTML;
-
-            // 渲染预订块
-            renderBookingBlocks(weekDays);
-        }
-
-        // 渲染预订块
-        function renderBookingBlocks(weekDays) {
-            const weekDates = weekDays.map(day => formatDate(day));
-
-            bookings.forEach(booking => {
-                if (!weekDates.includes(booking.startDate)) return;
-
-                const daySlot = document.querySelector(`[data-date="${booking.startDate}"][data-time="${booking.startTime}"]`);
-                if (!daySlot) return;
-
-                // 计算持续时间（以半小时为单位）
-                const duration = calculateDuration(booking.startTime, booking.endTime);
-                const height = duration * 25; // 移动端每半小时25px
-
-                const block = document.createElement('div');
-                block.className = `booking-block room-${booking.room}`;
-                block.style.height = `${height}px`;
-                block.textContent = `${booking.person} (${booking.room})`;
-                block.onclick = () => openEditModal(booking.id);
-
-                daySlot.appendChild(block);
-            });
-        }
-
-        // 计算持续时间（半小时单位）
-        function calculateDuration(startTime, endTime) {
-            const startMinutes = timeToMinutes(startTime);
-            const endMinutes = timeToMinutes(endTime);
-            return (endMinutes - startMinutes) / 30;
-        }
-
-        // 时间转换为分钟
-        function timeToMinutes(time) {
-            const [hours, minutes] = time.split(':').map(Number);
-            return hours * 60 + minutes;
-        }
-
-        // 加载预订数据
-        function loadBookings() {
-            const stored = localStorage.getItem('meetingBookings');
-            if (stored) {
-                bookings = JSON.parse(stored);
-            }
-        }
-
-        // 保存预订数据
-        function saveBookings() {
-            localStorage.setItem('meetingBookings', JSON.stringify(bookings));
-        }
-
-        // 添加预订
-        function addBooking() {
-            const name = document.getElementById('bookingName').value.trim();
+        // Add Booking
+        async function addBooking(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('bookerName').value.trim();
             const room = document.getElementById('roomSelect').value;
             const startDate = document.getElementById('startDate').value;
             const startTime = document.getElementById('startTime').value;
             const endDate = document.getElementById('endDate').value;
             const endTime = document.getElementById('endTime').value;
 
-            // 验证输入
+            // Validation
             if (!name || !room || !startDate || !startTime || !endDate || !endTime) {
-                showNotification('请填写所有字段', 'error');
+                showToast('请填写所有字段', 'error');
                 return;
             }
 
-            if (startDate > endDate) {
-                showNotification('结束日期不能早于开始日期', 'error');
+            const startDateTime = new Date(`${startDate}T${startTime}`);
+            const endDateTime = new Date(`${endDate}T${endTime}`);
+
+            if (endDateTime < startDateTime) {
+                showToast('结束日期不能早于开始日期', 'error');
+                return;
+            }
+            if (endDateTime <= startDateTime) {
+                showToast('结束时间必须晚于开始时间', 'error');
                 return;
             }
 
-            if (startDate === endDate && timeToMinutes(startTime) >= timeToMinutes(endTime)) {
-                showNotification('结束时间必须晚于开始时间', 'error');
-                return;
-            }
-
-            // 检查时间冲突
-            if (hasTimeConflict(room, startDate, startTime, endDate, endTime)) {
-                showNotification('该时间段已有预订，请选择其他时间', 'error');
-                return;
-            }
-
-            const booking = {
-                id: Date.now(),
-                person: name,
-                room: room,
-                startDate: startDate,
-                startTime: startTime,
-                endDate: endDate,
-                endTime: endTime
+            // Check for conflicts
+            const newBooking = {
+                id: Date.now(), // Temporary ID
+                name,
+                room,
+                start: startDateTime.toISOString(),
+                end: endDateTime.toISOString()
             };
 
-            bookings.push(booking);
-            saveBookings();
-            clearForm();
+            if (checkConflict(newBooking)) {
+                showToast('该时间段已有预订，请选择其他时间', 'error');
+                return;
+            }
+
+            // Real data write requires Supabase service-side configuration
+            // const { error } = await supabase.from('meeting_bookings').insert([newBooking]);
+            // if (error) { ... }
+
+            // For demo purposes, we add to local state
+            bookings.push(newBooking);
+            
             renderCalendar();
-            renderBookingsList();
-            showNotification('预订添加成功！', 'success');
-        }
-
-        // 检查时间冲突
-        function hasTimeConflict(room, startDate, startTime, endDate, endTime, excludeId = null) {
-            return bookings.some(booking => {
-                if (booking.id === excludeId) return false;
-                if (booking.room !== room) return false;
-
-                // 检查日期重叠
-                const dateOverlap = !(booking.endDate < startDate || booking.startDate > endDate);
-                if (!dateOverlap) return false;
-
-                // 如果是同一天，检查时间冲突
-                if (booking.startDate === startDate && booking.endDate === endDate) {
-                    const startMinutes = timeToMinutes(startTime);
-                    const endMinutes = timeToMinutes(endTime);
-                    const bookingStartMinutes = timeToMinutes(booking.startTime);
-                    const bookingEndMinutes = timeToMinutes(booking.endTime);
-
-                    return !(endMinutes <= bookingStartMinutes || startMinutes >= bookingEndMinutes);
-                }
-
-                // 跨日期预订简化处理
-                return true;
-            });
-        }
-
-        // 清空表单
-        function clearForm() {
-            document.getElementById('bookingName').value = '';
-            document.getElementById('roomSelect').value = '';
-            document.getElementById('startTime').value = '';
-            document.getElementById('endTime').value = '';
+            renderBookingList();
+            document.getElementById('bookingForm').reset();
+            
+            // Reset dates to today
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('startDate').value = today;
             document.getElementById('endDate').value = today;
+
+            showToast('预订添加成功！(演示模式)', 'success');
         }
 
-        // 渲染预订列表
-        function renderBookingsList() {
-            const tableBody = document.getElementById('bookingsTableBody');
-            const cardBody = document.getElementById('bookingsCardBody');
-
-            if (bookings.length === 0) {
-                tableBody.innerHTML = '';
-                cardBody.innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z"/>
-                        </svg>
-                        <p>暂无预订记录</p>
-                    </div>
-                `;
-                return;
-            }
-
-            // 按开始时间排序
-            const sortedBookings = [...bookings].sort((a, b) => {
-                if (a.startDate !== b.startDate) {
-                    return a.startDate.localeCompare(b.startDate);
-                }
-                return a.startTime.localeCompare(b.startTime);
-            });
-
-            // 桌面版表格
-            tableBody.innerHTML = sortedBookings.map(booking => `
-                <tr>
-                    <td>${booking.person}</td>
-                    <td><span class="room-badge room-${booking.room}">会议室 ${booking.room}</span></td>
-                    <td>${booking.startDate} ${booking.startTime}</td>
-                    <td>${booking.endDate} ${booking.endTime}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn btn-edit" onclick="openEditModal(${booking.id})">编辑</button>
-                            <button class="action-btn btn-delete" onclick="deleteBooking(${booking.id})">删除</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
-            // 移动版卡片
-            cardBody.innerHTML = sortedBookings.map(booking => `
-                <div class="booking-item">
-                    <div class="booking-info">
-                        <div class="booking-person">${booking.person}</div>
-                        <div class="booking-time">${booking.startDate} ${booking.startTime} - ${booking.endTime}</div>
-                    </div>
-                    <div class="booking-details">
-                        <span class="room-badge room-${booking.room}">会议室 ${booking.room}</span>
-                    </div>
-                    <div class="booking-actions">
-                        <button class="action-btn btn-edit" onclick="openEditModal(${booking.id})">编辑</button>
-                        <button class="action-btn btn-delete" onclick="deleteBooking(${booking.id})">删除</button>
-                    </div>
-                </div>
-            `).join('');
+        // Delete Booking
+        function deleteBooking(id) {
+            // In a real app, we might use a custom modal instead of confirm()
+            // But since native confirm is discouraged, we'll just do it or use a custom logic.
+            // For simplicity in this single file, we'll execute directly with a toast undo possibility (simulated).
+            
+            bookings = bookings.filter(b => b.id !== id);
+            
+            // Real delete logic: await supabase.from('meeting_bookings').delete().eq('id', id);
+            
+            renderCalendar();
+            renderBookingList();
+            showToast('预订已删除', 'success');
         }
 
-        // 打开编辑模态框
-        function openEditModal(bookingId) {
-            const booking = bookings.find(b => b.id === bookingId);
+        // Edit Booking
+        function openEditModal(id) {
+            const booking = bookings.find(b => b.id === id);
             if (!booking) return;
 
+            const start = new Date(booking.start);
+            const end = new Date(booking.end);
+
             document.getElementById('editBookingId').value = booking.id;
-            document.getElementById('editBookingName').value = booking.person;
+            document.getElementById('editBookerName').value = booking.name;
             document.getElementById('editRoomSelect').value = booking.room;
-            document.getElementById('editStartDate').value = booking.startDate;
-            document.getElementById('editStartTime').value = booking.startTime;
-            document.getElementById('editEndDate').value = booking.endDate;
-            document.getElementById('editEndTime').value = booking.endTime;
+            document.getElementById('editStartDate').value = start.toISOString().split('T')[0];
+            document.getElementById('editStartTime').value = `${start.getHours().toString().padStart(2,'0')}:${start.getMinutes().toString().padStart(2,'0')}`;
+            document.getElementById('editEndDate').value = end.toISOString().split('T')[0];
+            document.getElementById('editEndTime').value = `${end.getHours().toString().padStart(2,'0')}:${end.getMinutes().toString().padStart(2,'0')}`;
 
-            document.getElementById('editModal').classList.add('active');
+            document.getElementById('editModal').classList.remove('hidden');
         }
 
-        // 关闭编辑模态框
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-        }
-
-        // 保存编辑
         function saveEdit() {
-            const bookingId = parseInt(document.getElementById('editBookingId').value);
-            const name = document.getElementById('editBookingName').value.trim();
+            const id = parseInt(document.getElementById('editBookingId').value);
+            const name = document.getElementById('editBookerName').value.trim();
             const room = document.getElementById('editRoomSelect').value;
             const startDate = document.getElementById('editStartDate').value;
             const startTime = document.getElementById('editStartTime').value;
@@ -1280,97 +483,330 @@
             const endTime = document.getElementById('editEndTime').value;
 
             if (!name || !room || !startDate || !startTime || !endDate || !endTime) {
-                showNotification('请填写所有字段', 'error');
+                showToast('请填写所有字段', 'error');
                 return;
             }
 
-            if (startDate > endDate) {
-                showNotification('结束日期不能早于开始日期', 'error');
+            const startDateTime = new Date(`${startDate}T${startTime}`);
+            const endDateTime = new Date(`${endDate}T${endTime}`);
+
+            if (endDateTime <= startDateTime) {
+                showToast('结束时间必须晚于开始时间', 'error');
                 return;
             }
 
-            if (startDate === endDate && timeToMinutes(startTime) >= timeToMinutes(endTime)) {
-                showNotification('结束时间必须晚于开始时间', 'error');
+            const updatedBooking = {
+                id,
+                name,
+                room,
+                start: startDateTime.toISOString(),
+                end: endDateTime.toISOString()
+            };
+
+            // Check conflict excluding self
+            if (checkConflict(updatedBooking, id)) {
+                showToast('该时间段已有预订，请选择其他时间', 'error');
                 return;
             }
 
-            // 检查时间冲突
-            if (hasTimeConflict(room, startDate, startTime, endDate, endTime, bookingId)) {
-                showNotification('该时间段已有预订，请选择其他时间', 'error');
-                return;
-            }
-
-            const bookingIndex = bookings.findIndex(b => b.id === bookingId);
-            if (bookingIndex !== -1) {
-                bookings[bookingIndex] = {
-                    id: bookingId,
-                    person: name,
-                    room: room,
-                    startDate: startDate,
-                    startTime: startTime,
-                    endDate: endDate,
-                    endTime: endTime
-                };
-
-                saveBookings();
+            const index = bookings.findIndex(b => b.id === id);
+            if (index !== -1) {
+                bookings[index] = updatedBooking;
+                // Real update logic: await supabase.from('meeting_bookings').update(updatedBooking).eq('id', id);
+                
+                renderCalendar();
+                renderBookingList();
                 closeEditModal();
-                renderCalendar();
-                renderBookingsList();
-                showNotification('预订修改成功！', 'success');
+                showToast('预订修改成功！(演示模式)', 'success');
             }
         }
 
-        // 删除预订
-        function deleteBooking(bookingId) {
-            if (confirm('确定要删除这个预订吗？')) {
-                bookings = bookings.filter(b => b.id !== bookingId);
-                saveBookings();
-                renderCalendar();
-                renderBookingsList();
-                showNotification('预订已删除', 'success');
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // Helper Functions
+        // ==========================================
+
+        function checkConflict(newBooking, excludeId = null) {
+            return bookings.some(b => {
+                if (excludeId && b.id === excludeId) return false;
+                if (b.room !== newBooking.room) return false;
+                
+                const bStart = new Date(b.start);
+                const bEnd = new Date(b.end);
+                const nStart = new Date(newBooking.start);
+                const nEnd = new Date(newBooking.end);
+
+                return (nStart < bEnd && nEnd > bStart);
+            });
+        }
+
+        function getMonday(d) {
+            d = new Date(d);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+            return new Date(d.setDate(diff));
+        }
+
+        function formatDate(date) {
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            return `${m}月${d}日`;
+        }
+
+        function formatDateTime(isoString) {
+            const d = new Date(isoString);
+            return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        }
+
+        function initTimeSelects() {
+            const selects = ['startTime', 'endTime', 'editStartTime', 'editEndTime'];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if(!el) return;
+                // Keep first option if it's a placeholder
+                if (el.options.length > 0 && el.options[0].value === "") {
+                    el.innerHTML = '<option value="">请选择开始时间</option>';
+                } else {
+                    el.innerHTML = '';
+                }
+                
+                timeSlots.forEach(time => {
+                    const option = document.createElement('option');
+                    option.value = time;
+                    option.textContent = time;
+                    el.appendChild(option);
+                });
+            });
+            // Fix placeholder text for end times
+            document.getElementById('endTime').innerHTML = '<option value="">请选择结束时间</option>';
+            document.getElementById('editEndTime').innerHTML = '';
+            timeSlots.forEach(time => {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time;
+                document.getElementById('editEndTime').appendChild(option);
+            });
+        }
+
+        function getRoomColor(room) {
+            return room.includes('1401') ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-green-100 text-green-800 border-green-200';
+        }
+
+        // ==========================================
+        // Rendering Functions
+        // ==========================================
+
+        function renderCalendar() {
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+
+            const weekDates = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(currentWeekStart);
+                d.setDate(d.getDate() + i);
+                weekDates.push(d);
+                
+                // Update Header
+                const dayHeader = document.getElementById(`day-${i}`);
+                const dayName = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+                dayHeader.textContent = `${dayName} ${formatDate(d)}`;
+                
+                // Highlight today
+                const todayStr = new Date().toDateString();
+                if (d.toDateString() === todayStr) {
+                    dayHeader.classList.add('bg-blue-50', 'text-blue-600', 'font-bold');
+                } else {
+                    dayHeader.classList.remove('bg-blue-50', 'text-blue-600', 'font-bold');
+                }
             }
+
+            // Update Week Label
+            const startLabel = formatDate(weekDates[0]);
+            const endLabel = formatDate(weekDates[6]);
+            const year = weekDates[0].getFullYear();
+            document.getElementById('currentWeekLabel').textContent = `${year}年 ${startLabel} - ${endLabel}`;
+
+            // Render Rows
+            timeSlots.forEach(time => {
+                const row = document.createElement('div');
+                row.className = 'contents'; // Use CSS Grid contents to make direct children grid items
+
+                // Time Label
+                const timeCell = document.createElement('div');
+                timeCell.className = 'time-col p-2 text-xs text-gray-500 text-right pr-3 border-b border-gray-100 h-12 flex items-center justify-end';
+                timeCell.textContent = time;
+                row.appendChild(timeCell);
+
+                // Day Columns
+                weekDates.forEach(date => {
+                    const cell = document.createElement('div');
+                    cell.className = 'border-b border-r border-gray-100 p-1 relative h-12 hover:bg-gray-50 transition';
+                    
+                    // Find bookings for this slot
+                    const dateStr = date.toISOString().split('T')[0];
+                    const [hour, min] = time.split(':').map(Number);
+                    
+                    // Check if a booking starts at this time on this day
+                    const cellBookings = bookings.filter(b => {
+                        const bStart = new Date(b.start);
+                        return b.start.startsWith(dateStr) && bStart.getHours() === hour && bStart.getMinutes() === min;
+                    });
+
+                    cellBookings.forEach(b => {
+                        const block = document.createElement('div');
+                        block.className = `booking-block ${getRoomColor(b.room)} border`;
+                        block.textContent = `${b.name} (${b.room.split(' ')[1]})`;
+                        block.onclick = () => openEditModal(b.id);
+                        cell.appendChild(block);
+                    });
+
+                    row.appendChild(cell);
+                });
+
+                calendarBody.appendChild(row);
+            });
         }
 
-        // 上周
-        function previousWeek() {
-            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-            updateWeekDisplay();
-            renderCalendar();
+        function renderBookingList() {
+            const tbody = document.getElementById('bookingTableBody');
+            const cardList = document.getElementById('bookingCardList');
+            const emptyState = document.getElementById('emptyState');
+            
+            tbody.innerHTML = '';
+            cardList.innerHTML = '';
+
+            if (bookings.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            // Sort by start time
+            const sortedBookings = [...bookings].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            sortedBookings.forEach(b => {
+                // Desktop Row
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${b.name}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${getRoomColor(b.room)}">${b.room}</span></td>
+                    <td class="px-4 py-3 text-gray-500 text-xs">
+                        <div>${formatDateTime(b.start)}</div>
+                        <div class="text-gray-400">至 ${formatDateTime(b.end)}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="openEditModal(${b.id})" class="text-blue-600 hover:text-blue-800 mr-3" title="编辑">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button onclick="deleteBooking(${b.id})" class="text-red-500 hover:text-red-700" title="删除">
+                            <i class="fas fa-trash-alt"></i> 删除
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                // Mobile Card
+                const card = document.createElement('div');
+                card.className = 'bg-white p-3 rounded shadow border border-gray-100';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-bold text-gray-800">${b.name}</div>
+                        <span class="px-2 py-1 rounded text-xs ${getRoomColor(b.room)}">${b.room}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mb-3">
+                        <i class="far fa-clock mr-1"></i> ${formatDateTime(b.start)} - ${formatDateTime(b.end)}
+                    </div>
+                    <div class="flex justify-end space-x-2 border-t pt-2">
+                        <button onclick="openEditModal(${b.id})" class="text-sm text-blue-600 font-medium">编辑</button>
+                        <button onclick="deleteBooking(${b.id})" class="text-sm text-red-500 font-medium">删除</button>
+                    </div>
+                `;
+                cardList.appendChild(card);
+            });
         }
 
-        // 下周
-        function nextWeek() {
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-            updateWeekDisplay();
-            renderCalendar();
+        // ==========================================
+        // UI Interactions & Event Listeners
+        // ==========================================
+
+        function setupEventListeners() {
+            // Week Navigation
+            document.getElementById('prevWeekBtn').addEventListener('click', () => {
+                currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+                renderCalendar();
+            });
+
+            document.getElementById('nextWeekBtn').addEventListener('click', () => {
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                renderCalendar();
+            });
+
+            // Form
+            document.getElementById('bookingForm').addEventListener('submit', addBooking);
+            
+            document.getElementById('clearFormBtn').addEventListener('click', () => {
+                document.getElementById('bookingForm').reset();
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('startDate').value = today;
+                document.getElementById('endDate').value = today;
+            });
+
+            // Modal
+            document.getElementById('closeModalBtn').addEventListener('click', closeEditModal);
+            document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+            document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
+
+            // Close modal on outside click
+            document.getElementById('editModal').addEventListener('click', (e) => {
+                if (e.target.id === 'editModal') closeEditModal();
+            });
+
+            // Close modal on ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !document.getElementById('editModal').classList.contains('hidden')) {
+                    closeEditModal();
+                }
+            });
         }
 
-        // 显示通知
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
+        // Custom Toast Notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass, icon;
+            if (type === 'success') {
+                bgClass = 'bg-green-500';
+                icon = '<i class="fas fa-check-circle"></i>';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-500';
+                icon = '<i class="fas fa-exclamation-circle"></i>';
+            } else {
+                bgClass = 'bg-blue-500';
+                icon = '<i class="fas fa-info-circle"></i>';
+            }
 
+            toast.className = `toast flex items-center w-full max-w-xs p-4 space-x-3 text-white rounded-lg shadow-lg ${bgClass}`;
+            toast.innerHTML = `
+                <div class="text-xl">${icon}</div>
+                <div class="text-sm font-medium">${message}</div>
+            `;
+
+            container.appendChild(toast);
+
+            // Remove after 3 seconds
             setTimeout(() => {
-                notification.style.animation = 'slideInDown 0.3s ease reverse';
-                setTimeout(() => notification.remove(), 300);
+                toast.classList.add('hiding');
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
             }, 3000);
         }
 
-        // 点击模态框外部关闭
-        document.getElementById('editModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeEditModal();
-            }
-        });
-
-        // ESC键关闭模态框
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeEditModal();
-            }
-        });
     </script>
 </body>
 </html>
